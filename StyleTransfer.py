@@ -33,10 +33,9 @@ conn = pymysql.connect(rds_host, user=name,
 
 
 # In[142]:
-
+tweets_complete = [2,3,4,5,6,7,8,9,10,11,12,21,101,102,103,104,105,106,107,108,109,110,111,112,113,114]
 while True:
     cur = conn.cursor()
-    tweets_complete = [2,3,4,5,6]
     tweet_nums = []
     cur.execute("SELECT id FROM NewTweets")
     result_set = cur.fetchall()
@@ -77,8 +76,8 @@ while True:
         # In[120]:
 
 
-        height = 512
-        width = 512
+        height = 200
+        width = 200
         content_image = Image.open('image.jpg')
         content_image = content_image.resize((height, width))
         content_image
@@ -152,9 +151,9 @@ while True:
         # In[128]:
 
 
-        content_weight = 0.025
-        style_weight = 5.0
-        total_variation_weight = 1.0
+        content_weight = 0.35
+        style_weight = 4.5
+        total_variation_weight = 0.95
 
 
         # In[129]:
