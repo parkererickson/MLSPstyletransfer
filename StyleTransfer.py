@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[114]:
+# In[1]:
 
 
 from __future__ import print_function
@@ -20,7 +20,7 @@ import pymysql
 import config
 
 
-# In[115]:
+# In[158]:
 
 
 rds_host  = config.db_endpoint
@@ -32,33 +32,23 @@ conn = pymysql.connect(rds_host, user=name,
                            passwd=password, db=db_name, connect_timeout=5)
 
 
-# In[142]:
-tweets_complete = [2,3,4,5,6,7,8,9,10,11,12,21,101,102,103,104,105,106,107,108,109,110,111,112,113,114]
+# In[159]:
+
 while True:
-    cur = conn.cursor()
-    tweet_nums = []
-    cur.execute("SELECT id FROM NewTweets")
-    result_set = cur.fetchall()
-    for row in result_set:
-        tweet_nums.append(int(row[0]))
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
+        result = cur.fetchone()
+        print(result)
+        tweet_id = result[4]
+        timestamp = result[0]
+        image_url = result[1]
+        style_url = result[2]
+        username = result[3]
+        complete = result[5]
 
 
-    tweets_to_process = [a for a in tweet_nums if a not in tweets_complete]
-    print(tweets_to_process)
-
-
-    if len(tweets_to_process) > 0:
-        row = cur.execute("SELECT * FROM NewTweets WHERE id="+str(tweets_to_process[0])+";")
-        row = cur.fetchone()
-        print(row)
-        tweet_num = row[4]
-        timestamp = row[0]
-        image_url = row[1]
-        style_url = row[2]
-        username = row[3]
-
-
-        # In[119]:
+    # In[135]:
 
 
         import requests
@@ -73,17 +63,17 @@ while True:
             handler.write(style_data)
 
 
-        # In[120]:
+        # In[136]:
 
 
-        height = 200
-        width = 200
+        height = 512
+        width = 512
         content_image = Image.open('image.jpg')
         content_image = content_image.resize((height, width))
         content_image
 
 
-        # In[121]:
+        # In[137]:
 
 
         style_image_path = 'style.jpg'
@@ -92,7 +82,7 @@ while True:
         style_image
 
 
-        # In[122]:
+        # In[138]:
 
 
         content_array = np.asarray(content_image, dtype='float32')
@@ -104,7 +94,7 @@ while True:
         print(style_array.shape)
 
 
-        # In[123]:
+        # In[139]:
 
 
         content_array[:, :, :, 0] -= 103.939
@@ -118,7 +108,7 @@ while True:
         style_array = style_array[:, :, :, ::-1]
 
 
-        # In[124]:
+        # In[140]:
 
 
         content_image = backend.variable(content_array)
@@ -126,7 +116,7 @@ while True:
         combination_image = backend.placeholder((1, height, width, 3))
 
 
-        # In[125]:
+        # In[141]:
 
 
         input_tensor = backend.concatenate([content_image,
@@ -134,35 +124,35 @@ while True:
                                             combination_image], axis=0)
 
 
-        # In[126]:
+        # In[142]:
 
 
         model = VGG16(input_tensor=input_tensor, weights='imagenet',
                       include_top=False)
 
 
-        # In[127]:
+        # In[143]:
 
 
         layers = dict([(layer.name, layer.output) for layer in model.layers])
         layers
 
 
-        # In[128]:
+        # In[144]:
 
 
-        content_weight = 0.35
-        style_weight = 4.5
-        total_variation_weight = 0.95
+        content_weight = 0.025
+        style_weight = 5.25
+        total_variation_weight = 1.0
 
 
-        # In[129]:
+        # In[145]:
 
 
         loss = backend.variable(0.)
 
 
-        # In[130]:
+        # In[146]:
 
 
         def content_loss(content, combination):
@@ -176,7 +166,7 @@ while True:
                                               combination_features)
 
 
-        # In[131]:
+        # In[147]:
 
 
         def gram_matrix(x):
@@ -185,7 +175,7 @@ while True:
             return gram
 
 
-        # In[132]:
+        # In[148]:
 
 
         def style_loss(style, combination):
@@ -206,7 +196,7 @@ while True:
             loss += (style_weight / len(feature_layers)) * sl
 
 
-        # In[133]:
+        # In[149]:
 
 
         def total_variation_loss(x):
@@ -217,13 +207,13 @@ while True:
         loss += total_variation_weight * total_variation_loss(combination_image)
 
 
-        # In[134]:
+        # In[150]:
 
 
         grads = backend.gradients(loss, combination_image)
 
 
-        # In[135]:
+        # In[151]:
 
 
         outputs = [loss]
@@ -260,7 +250,7 @@ while True:
         evaluator = Evaluator()
 
 
-        # In[145]:
+        # In[152]:
 
 
         x = np.random.uniform(0, 255, (1, height, width, 3)) - 128.
@@ -277,7 +267,7 @@ while True:
             print('Iteration %d completed in %ds' % (i, end_time - start_time))
 
 
-        # In[146]:
+        # In[153]:
 
 
         x = x.reshape((height, width, 3))
@@ -291,14 +281,17 @@ while True:
         result.save('temp.jpg')
 
 
-        # In[147]:
+        # In[154]:
 
 
-        tweets_complete.append(int(tweet_num))
-        print(tweets_complete)
+        with conn.cursor() as cur:
+                   cur.execute("""UPDATE Queue
+                       SET Complete = 1
+                       WHERE Tweet_ID ="""+tweet_id)
+                   conn.commit()
 
 
-        # In[148]:
+        # In[155]:
 
 
         from twitter import Api
@@ -308,9 +301,17 @@ while True:
                   config.access_token_secret)
 
 
-        # In[152]:
+        # In[156]:
 
 
-        api.PostUpdate(media = "temp.jpg", status = "Hope you like it, @"+username)
-    else:
+        status_options = ["Hope you like it, @","Voila, @", "There you go, @","It's a thing of beauty @"]
+        from random import randint
+        a = (randint(0, 3))
+
+
+        # In[157]:
+
+
+        api.PostUpdate(in_reply_to_status_id = tweet_id, media = "temp.jpg", status = status_options[a]+username)
+    except:
         pass
