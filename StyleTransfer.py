@@ -35,23 +35,19 @@ conn = pymysql.connect(rds_host, user=name,
 # In[159]:
 
 while True:
-  try:
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
-    result = cur.fetchone()
-    print(result)
-    tweet_id = result[4]
-    timestamp = result[0]
-    image_url = result[1]
-    style_url = result[2]
-    username = result[3]
-    complete = result[5]
-    process_tweet()
-  except:
-    pass
+  cur = conn.cursor()
+  cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
+  result = cur.fetchone()
+  print(result)
+  tweet_id = result[4]
+  timestamp = result[0]
+  image_url = result[1]
+  style_url = result[2]
+  username = result[3]
+  complete = result[5]
+  process_tweet()
 
-
-    # In[135]:
+ # In[135]:
 
 def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete):
 
