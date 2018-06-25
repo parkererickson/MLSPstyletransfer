@@ -32,26 +32,8 @@ conn = pymysql.connect(rds_host, user=name,
                            passwd=password, db=db_name, connect_timeout=5)
 
 
-# In[159]:
-
-while True:
-  cur = conn.cursor()
-  cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
-  result = cur.fetchone()
-  print(result)
-  tweet_id = result[4]
-  timestamp = result[0]
-  image_url = result[1]
-  style_url = result[2]
-  username = result[3]
-  complete = result[5]
-  process_tweet()
-
- # In[135]:
 
 def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete):
-
-
   img_data = requests.get(image_url).content
   with open('image.jpg', 'wb') as handler:
       handler.write(img_data)
@@ -61,28 +43,16 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   with open('style.jpg', 'wb') as handler:
       handler.write(style_data)
 
-
-  # In[136]:
-
-
   height = 512
   width = 512
   content_image = Image.open('image.jpg')
   content_image = content_image.resize((height, width))
   content_image
 
-
-  # In[137]:
-
-
   style_image_path = 'style.jpg'
   style_image = Image.open(style_image_path)
   style_image = style_image.resize((height, width))
   style_image
-
-
-  # In[138]:
-
 
   content_array = np.asarray(content_image, dtype='float32')
   content_array = np.expand_dims(content_array, axis=0)
@@ -91,10 +61,6 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   style_array = np.asarray(style_image, dtype='float32')
   style_array = np.expand_dims(style_array, axis=0)
   print(style_array.shape)
-
-
-  # In[139]:
-
 
   content_array[:, :, :, 0] -= 103.939
   content_array[:, :, :, 1] -= 116.779
@@ -106,53 +72,25 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   style_array[:, :, :, 2] -= 123.68
   style_array = style_array[:, :, :, ::-1]
 
-
-  # In[140]:
-
-
   content_image = backend.variable(content_array)
   style_image = backend.variable(style_array)
   combination_image = backend.placeholder((1, height, width, 3))
-
-
-  # In[141]:
-
 
   input_tensor = backend.concatenate([content_image,
                                       style_image,
                                       combination_image], axis=0)
 
-
-  # In[142]:
-
-
   model = VGG16(input_tensor=input_tensor, weights='imagenet',
                 include_top=False)
 
-
-  # In[143]:
-
-
   layers = dict([(layer.name, layer.output) for layer in model.layers])
   layers
-
-
-  # In[144]:
-
 
   content_weight = 0.025
   style_weight = 5.25
   total_variation_weight = 1.0
 
-
-  # In[145]:
-
-
   loss = backend.variable(0.)
-
-
-  # In[146]:
-
 
   def content_loss(content, combination):
       return backend.sum(backend.square(combination - content))
@@ -163,19 +101,11 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
 
   loss += content_weight * content_loss(content_image_features,
                                         combination_features)
-
-
-  # In[147]:
-
-
+  
   def gram_matrix(x):
       features = backend.batch_flatten(backend.permute_dimensions(x, (2, 0, 1)))
       gram = backend.dot(features, backend.transpose(features))
       return gram
-
-
-  # In[148]:
-
 
   def style_loss(style, combination):
       S = gram_matrix(style)
@@ -193,11 +123,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
       combination_features = layer_features[2, :, :, :]
       sl = style_loss(style_features, combination_features)
       loss += (style_weight / len(feature_layers)) * sl
-
-
-  # In[149]:
-
-
+      
   def total_variation_loss(x):
       a = backend.square(x[:, :height-1, :width-1, :] - x[:, 1:, :width-1, :])
       b = backend.square(x[:, :height-1, :width-1, :] - x[:, :height-1, 1:, :])
@@ -206,14 +132,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   loss += total_variation_weight * total_variation_loss(combination_image)
 
 
-  # In[150]:
-
-
   grads = backend.gradients(loss, combination_image)
-
-
-  # In[151]:
-
 
   outputs = [loss]
   outputs += grads
@@ -247,11 +166,6 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
           return grad_values
 
   evaluator = Evaluator()
-
-
-  # In[152]:
-
-
   x = np.random.uniform(0, 255, (1, height, width, 3)) - 128.
 
   iterations = 10
@@ -265,10 +179,6 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
       end_time = time.time()
       print('Iteration %d completed in %ds' % (i, end_time - start_time))
 
-
-  # In[153]:
-
-
   x = x.reshape((height, width, 3))
   x = x[:, :, ::-1]
   x[:, :, 0] += 103.939
@@ -279,36 +189,41 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   result = Image.fromarray(x)
   result.save('temp.jpg')
 
-
-  # In[154]:
-
-
+  # Updating Completeness in Database
   with conn.cursor() as cur:
              cur.execute("""UPDATE Queue
                  SET Complete = 1
                  WHERE Tweet_ID ="""+tweet_id)
              conn.commit()
-
-
-  # In[155]:
-
-
-
+        
+  # Twitter Cred Loading
   api = Api(config.consumer_key,
             config.consumer_secret,
             config.access_token_key,
             config.access_token_secret)
-
-
-  # In[156]:
-
-
+  
+  # Forming Tweet
   status_options = ["Hope you like it, @","Voila, @", "There you go, @","It's a thing of beauty @"]
   from random import randint
   a = (randint(0, 3))
-
-
-  # In[157]:
-
-
   api.PostUpdate(in_reply_to_status_id = tweet_id, media = "temp.jpg", status = status_options[a]+username)
+
+
+# In[159]:
+
+while True:
+  cur = conn.cursor()
+  cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
+  result = cur.fetchone()
+  print(result)
+  tweet_id = result[4]
+  timestamp = result[0]
+  image_url = result[1]
+  style_url = result[2]
+  username = result[3]
+  complete = result[5]
+  process_tweet()
+
+ # In[135]:
+
+
