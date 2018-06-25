@@ -213,17 +213,19 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
 
 while True:
   cur = conn.cursor()
-  cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
-  result = cur.fetchone()
-  print(result)
-  tweet_id = result[4]
-  timestamp = result[0]
-  image_url = result[1]
-  style_url = result[2]
-  username = result[3]
-  complete = result[5]
-  process_tweet()
-
+  try:
+    cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
+    result = cur.fetchone()
+    print(result)
+    tweet_id = result[4]
+    timestamp = result[0]
+    image_url = result[1]
+    style_url = result[2]
+    username = result[3]
+    complete = result[5]
+    process_tweet(tweet_id = tweet_id, timestamp = timestamp, image_url = image_url, style_url = style_url, username = username, complete = complete)
+  except:
+    pass
  # In[135]:
 
 
