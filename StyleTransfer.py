@@ -35,11 +35,13 @@ conn = pymysql.connect(rds_host, user=name,
 # In[159]:
 
 while True:
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
-        result = cur.fetchone()
-        print(result)
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
+    result = cur.fetchone()
+    print(result)
+    if result is "None":
+        break
+    else:
         tweet_id = result[4]
         timestamp = result[0]
         image_url = result[1]
@@ -313,5 +315,3 @@ while True:
 
 
         api.PostUpdate(in_reply_to_status_id = tweet_id, media = "temp.jpg", status = status_options[a]+username)
-    except:
-        pass
