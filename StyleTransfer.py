@@ -21,6 +21,7 @@ import config
 import requests
 from twitter import Api
 import boto3
+import os
 # In[158]:
 
 
@@ -227,10 +228,10 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
                     <a class="navbar-brand" href="#">MLStylePhoto</a>
                 </div>
                 <ul class="nav navbar-nav">
-                <li class="active"><a href="#">Home</a></li>
-                <li><a href="#">Gallery</a></li>
-                <li><a href="#">How It Works</a></li>
-                <li><a href="#">Contact</a></li>
+                <li class="active"><a href="/">Home</a></li>
+                <li><a href="/gallery.html">Gallery</a></li>
+                <li><a href="/howitworks.html">How It Works</a></li>
+                <li><a href="/contact.html">Contact</a></li>
                 </ul>
             </div>
         </nav>
@@ -254,7 +255,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   status_options = ["Hope you like it, @","Voila, @", "There you go, @","It's a thing of beauty @"]
   from random import randint
   a = (randint(0, 3))
-  api.PostUpdate(in_reply_to_status_id = tweet_id, status = status_options[a]+username+"!"  "http://mlstylephoto.s3-website.us-east-2.amazonaws.com/"+html_name)
+  api.PostUpdate(in_reply_to_status_id = tweet_id, status = status_options[a]+username+"! " "http://mlstylephoto.s3-website.us-east-2.amazonaws.com/"+html_name)
 
   # Updating Completeness in Database
   with conn.cursor() as cur:
@@ -262,24 +263,26 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
                  SET Complete = 1
                  WHERE Tweet_ID ="""+tweet_id)
              conn.commit()
-
-
-# In[159]:
+  os.remove(Html_file)
+  os.remove(filename)
+  os.remove(image.jpg)
+  os.remove(style.jpg)
 
 while True:
     cur = conn.cursor()
-    cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
-    result = cur.fetchone()
-    print(result)
-    tweet_id = result[4]
-    timestamp = result[0]
-    image_url = result[1]
-    style_url = result[2]
-    username = result[3]
-    complete = result[5]
-    process_tweet(tweet_id = tweet_id, timestamp = timestamp, image_url = image_url, style_url = style_url, username = username, complete = complete)
-    ec2 = boto3.client('ec2', region_name = "us-east-2")
-    ec2.stop_instances(InstanceIds = ['i-08230cf0b47f62e76'])
- # In[135]:
+    try:
+        cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
+        result = cur.fetchone()
+        print(result)
+        tweet_id = result[4]
+        timestamp = result[0]
+        image_url = result[1]
+        style_url = result[2]
+        username = result[3]
+        complete = result[5]
+        process_tweet(tweet_id = tweet_id, timestamp = timestamp, image_url = image_url, style_url = style_url, username = username, complete = complete)
+    except:
+        ec2 = boto3.client('ec2', region_name = "us-east-2")
+        ec2.stop_instances(InstanceIds = ['i-08230cf0b47f62e76'])
 
 
