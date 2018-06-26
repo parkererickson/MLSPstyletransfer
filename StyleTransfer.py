@@ -20,6 +20,7 @@ import pymysql
 import config
 import requests
 from twitter import Api
+import boto3
 # In[158]:
 
 
@@ -187,7 +188,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   x = np.clip(x, 0, 255).astype('uint8')
 
   result = Image.fromarray(x)
-  result.save('temp.jpg')
+  result.save(tweet_id+'.jpg')
 
   # Updating Completeness in Database
   with conn.cursor() as cur:
@@ -195,8 +196,15 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
                  SET Complete = 1
                  WHERE Tweet_ID ="""+tweet_id)
              conn.commit()
-        
-  # Twitter Cred Loading
+
+  s3 = boto3.client('s3')
+  bucket_name = "mlstylephoto"
+  s3.upload_file(tweet_id+'.jpg', bucket_name)
+  
+
+
+
+# Twitter Cred Loading
   api = Api(config.consumer_key,
             config.consumer_secret,
             config.access_token_key,
@@ -206,7 +214,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   status_options = ["Hope you like it, @","Voila, @", "There you go, @","It's a thing of beauty @"]
   from random import randint
   a = (randint(0, 3))
-  api.PostUpdate(in_reply_to_status_id = tweet_id, media = "temp.jpg", status = status_options[a]+username)
+  api.PostUpdate(in_reply_to_status_id = tweet_id, media = tweet_id+".jpg", status = status_options[a]+username)
 
 
 # In[159]:
@@ -225,7 +233,8 @@ while True:
     complete = result[5]
     process_tweet(tweet_id = tweet_id, timestamp = timestamp, image_url = image_url, style_url = style_url, username = username, complete = complete)
   except:
-    pass
+    ec2 = boto3.client('ec2', region_name = "us-east-2")
+    ec2.stop_instances(InstanceIds = ['i-08230cf0b47f62e76'])
  # In[135]:
 
 
