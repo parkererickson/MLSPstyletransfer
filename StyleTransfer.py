@@ -199,9 +199,55 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
 
   s3 = boto3.client('s3')
   bucket_name = "mlstylephoto"
-  s3.upload_file(tweet_id+'.jpg', bucket_name)
-  
+  filename = tweet_id+'.jpg'
+  s3.upload_file(filename, bucket_name, filename)
+    
+  html = """
+  <!doctype html>
 
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+
+        <title>MLstylephoto</title>
+        <meta name="description" content="Machine Learning Styled Photos">
+        <meta name="author" content="Parker Erickson">
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({
+            google_ad_client: "ca-pub-7458822905226900",
+            enable_page_level_ads: true
+            });
+        </script>
+    </head>
+
+    <body>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="#">MLStylePhoto</a>
+                </div>
+                <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li><a href="#">Gallery</a></li>
+                <li><a href="#">How It Works</a></li>
+                <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+        </nav>
+        <img src="""+filename+""">
+    </body>
+    </html>"""
+  html_name = tweet_id+".html"
+  Html_file= open(html_name,"w")
+  Html_file.write()
+  Html_file.close
+  s3.meta.client.upload_file(html_name, bucket_name, html_name, ExtraArgs={'ContentType': "text/html", 'ACL': "public-read"} )
 
 
 # Twitter Cred Loading
@@ -214,7 +260,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   status_options = ["Hope you like it, @","Voila, @", "There you go, @","It's a thing of beauty @"]
   from random import randint
   a = (randint(0, 3))
-  api.PostUpdate(in_reply_to_status_id = tweet_id, media = tweet_id+".jpg", status = status_options[a]+username)
+  api.PostUpdate(in_reply_to_status_id = tweet_id, status = status_options[a]+username+"!"  "http://mlstylephoto.s3-website.us-east-2.amazonaws.com/"+html_name)
 
 
 # In[159]:
