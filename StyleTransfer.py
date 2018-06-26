@@ -190,13 +190,7 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   result = Image.fromarray(x)
   result.save(tweet_id+'.jpg')
 
-  # Updating Completeness in Database
-  with conn.cursor() as cur:
-             cur.execute("""UPDATE Queue
-                 SET Complete = 1
-                 WHERE Tweet_ID ="""+tweet_id)
-             conn.commit()
-
+ 
   s3 = boto3.client('s3')
   bucket_name = "mlstylephoto"
   filename = tweet_id+'.jpg'
@@ -245,9 +239,9 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
     </html>"""
   html_name = tweet_id+".html"
   Html_file= open(html_name,"w")
-  Html_file.write()
-  Html_file.close
-  s3.meta.client.upload_file(html_name, bucket_name, html_name, ExtraArgs={'ContentType': "text/html", 'ACL': "public-read"} )
+  Html_file.write(html)
+  Html_file.close()
+  s3.upload_file(html_name, bucket_name, html_name, ExtraArgs={'ContentType': "text/html", 'ACL': "public-read"} )
 
 
 # Twitter Cred Loading
@@ -262,12 +256,18 @@ def process_tweet(tweet_id, timestamp, image_url, style_url, username, complete)
   a = (randint(0, 3))
   api.PostUpdate(in_reply_to_status_id = tweet_id, status = status_options[a]+username+"!"  "http://mlstylephoto.s3-website.us-east-2.amazonaws.com/"+html_name)
 
+  # Updating Completeness in Database
+  with conn.cursor() as cur:
+             cur.execute("""UPDATE Queue
+                 SET Complete = 1
+                 WHERE Tweet_ID ="""+tweet_id)
+             conn.commit()
+
 
 # In[159]:
 
 while True:
-  cur = conn.cursor()
-  try:
+    cur = conn.cursor()
     cur.execute("SELECT * FROM Queue WHERE Complete = 0 ORDER BY Time ASC LIMIT 1;")
     result = cur.fetchone()
     print(result)
@@ -278,7 +278,6 @@ while True:
     username = result[3]
     complete = result[5]
     process_tweet(tweet_id = tweet_id, timestamp = timestamp, image_url = image_url, style_url = style_url, username = username, complete = complete)
-  except:
     ec2 = boto3.client('ec2', region_name = "us-east-2")
     ec2.stop_instances(InstanceIds = ['i-08230cf0b47f62e76'])
  # In[135]:
