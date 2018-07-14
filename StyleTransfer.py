@@ -283,6 +283,6 @@ while True:
         process_tweet(tweet_id = tweet_id, timestamp = timestamp, image_url = image_url, style_url = style_url, username = username, complete = complete)
     except:
         ec2 = boto3.client('ec2', region_name = "us-east-2")
-        ec2.stop_instances(InstanceIds = ['i-08230cf0b47f62e76'])
+        ec2.stop_instances(InstanceIds = ['i-###########'])
 
 
